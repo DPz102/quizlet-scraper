@@ -1,0 +1,27 @@
+# Quizlet Scraper Configuration
+
+quizlet:
+  base_url: "https://quizlet.com"
+  login_url: "https://quizlet.com/login"
+  library_url: "https://quizlet.com/latest"
+
+browser:
+  headless: false  # Set to true after initial login
+  slow_mo: 100     # Milliseconds between actions (anti-detection)
+  timeout: 30000   # Page load timeout in ms
+
+scraper:
+  delay_min: 2.0   # Minimum delay between requests (seconds)
+  delay_max: 5.0   # Maximum delay between requests (seconds)
+  max_retries: 3   # Maximum retry attempts on failure
+
+export:
+  output_dir: "output"
+  formats:
+    - json
+    - csv
+  include_images: false  # Whether to download image URLs
+
+auth:
+  session_dir: "auth"
+  session_file: "quizlet_session.json"
