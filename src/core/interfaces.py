@@ -30,7 +30,7 @@ class FlashCardSet:
     set_id: str
     title: str
     url: str
-    cards: List[FlashCard] = field(default_factory=list)
+    cards: List[FlashCard] = field(default_factory=lambda: [])
     description: Optional[str] = None
     created_by: Optional[str] = None
     term_count: int = 0
@@ -63,9 +63,9 @@ class FlashCardSet:
 @dataclass
 class UserLibrary:
     """User's library containing sets, folders, classes."""
-    sets: List[FlashCardSet] = field(default_factory=list)
-    folder_urls: List[str] = field(default_factory=list)
-    class_urls: List[str] = field(default_factory=list)
+    sets: List[FlashCardSet] = field(default_factory=lambda: [])
+    folder_urls: List[str] = field(default_factory=lambda: [])
+    class_urls: List[str] = field(default_factory=lambda: [])
 
 
 # ============================================================================
@@ -194,7 +194,7 @@ class BaseExporter(ABC):
             output_path = f"{output_path}{self.file_extension}"
         
         # Serialize and write
-        content = self._serialize(flashcard_set)
+        content: str = self._serialize(flashcard_set)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
         
@@ -205,15 +205,15 @@ class BaseExporter(ABC):
         import os
         
         os.makedirs(output_dir, exist_ok=True)
-        output_paths = []
+        output_paths: List[str] = []
         
         for flashcard_set in sets:
             # Sanitize filename
-            safe_title = self._sanitize_filename(flashcard_set.title)
-            filename = f"{flashcard_set.set_id}_{safe_title}"
-            output_path = os.path.join(output_dir, filename)
+            safe_title: str = self._sanitize_filename(flashcard_set.title)
+            filename: str = f"{flashcard_set.set_id}_{safe_title}"
+            output_path: str = os.path.join(output_dir, filename)
             
-            result_path = self.export(flashcard_set, output_path)
+            result_path: str = self.export(flashcard_set, output_path)
             output_paths.append(result_path)
         
         return output_paths
@@ -223,8 +223,8 @@ class BaseExporter(ABC):
         """Sanitize string for use as filename."""
         import re
         # Remove invalid characters
-        sanitized = re.sub(r'[<>:"/\\|?*]', '', name)
+        sanitized: str = re.sub(r'[<>:"/\\|?*]', '', name)
         # Replace spaces with underscores
-        sanitized = sanitized.replace(' ', '_')
+        sanitized: str = sanitized.replace(' ', '_')
         # Limit length
         return sanitized[:50]

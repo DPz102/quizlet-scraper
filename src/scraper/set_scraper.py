@@ -7,13 +7,13 @@ import re
 import json
 import logging
 from typing import List, Optional, Dict, Any
-from playwright.sync_api import BrowserContext, Response
+from playwright.sync_api import BrowserContext, Page, Response, Locator
 
 from src.core.interfaces import FlashCard, FlashCardSet
 from src.core.exceptions import SetNotFoundError, AccessDeniedError, ScrapingError
 from src.scraper.base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class SetScraper(BaseScraper):
@@ -35,7 +35,7 @@ class SetScraper(BaseScraper):
         delay_max: float = 5.0,
         max_retries: int = 3,
         prefer_api: bool = True
-    ):
+    ) -> None:
         """
         Initialize set scraper.
         
@@ -47,7 +47,7 @@ class SetScraper(BaseScraper):
             prefer_api: Whether to prefer API interception over DOM scraping.
         """
         super().__init__(context, delay_min, delay_max, max_retries)
-        self._prefer_api = prefer_api
+        self._prefer_api: bool = prefer_api
         self._captured_data: Optional[Dict[str, Any]] = None
     
     def scrape_set(self, set_url: str) -> FlashCardSet:
@@ -69,7 +69,7 @@ class SetScraper(BaseScraper):
         # Reset captured data
         self._captured_data = None
         
-        page = self._get_page()
+        page: Page = self._get_page()
         
         # Set up API interception if preferred
         if self._prefer_api:
@@ -119,7 +119,7 @@ class SetScraper(BaseScraper):
         for i, url in enumerate(set_urls, 1):
             logger.info(f"Scraping set {i}/{len(set_urls)}: {url}")
             try:
-                flash_set = self.scrape_set(url)
+                flash_set: FlashCardSet = self.scrape_set(url)
                 results.append(flash_set)
                 logger.info(f"Successfully scraped: {flash_set.title} ({len(flash_set.cards)} cards)")
             except Exception as e:
@@ -131,11 +131,11 @@ class SetScraper(BaseScraper):
     def _handle_response(self, response: Response) -> None:
         """Handle intercepted API responses."""
         try:
-            url = response.url
+            url: str = response.url
             
             # Look for set data API endpoints
             if "/webapi/" in url and response.status == 200:
-                content_type = response.headers.get("content-type", "")
+                content_type: str = response.headers.get("content-type", "")
                 if "application/json" in content_type:
                     try:
                         data = response.json()
@@ -155,9 +155,9 @@ class SetScraper(BaseScraper):
             return False
         
         # Look for common flashcard data patterns
-        indicators = ["studiableItem", "terms", "cards", "studiableData"]
+        indicators: List[str] = ["studiableItem", "terms", "cards", "studiableData"]
         
-        def search_dict(d: dict, depth: int = 0) -> bool:
+        def search_dict(d: Dict[str, Any], depth: int = 0) -> bool:
             if depth > 3:
                 return False
             for key, value in d.items():
@@ -174,12 +174,12 @@ class SetScraper(BaseScraper):
         """Parse flashcard data from API response."""
         cards: List[FlashCard] = []
         title = "Untitled Set"
-        set_id = self._extract_set_id(set_url)
-        description = None
-        created_by = None
+        set_id: str | None = self._extract_set_id(set_url)
+        description: Optional[str] = None
+        created_by: Optional[str] = None
         
         # Navigate through nested structure to find cards
-        def find_terms(obj: Any) -> List[Dict]:
+        def find_terms(obj: Any) -> List[Dict[str, Any]]:
             if isinstance(obj, list):
                 # Check if this looks like a terms list
                 if obj and isinstance(obj[0], dict):
@@ -218,7 +218,7 @@ class SetScraper(BaseScraper):
         
         for term in terms_data:
             try:
-                card = self._parse_term(term)
+                card: FlashCard | None = self._parse_term(term)
                 if card:
                     cards.append(card)
             except Exception as e:
@@ -235,12 +235,12 @@ class SetScraper(BaseScraper):
             term_count=len(cards)
         )
     
-    def _parse_term(self, term: Dict) -> Optional[FlashCard]:
+    def _parse_term(self, term: Dict[str, Any]) -> Optional[FlashCard]:
         """Parse a single term from API data."""
-        term_text = None
-        definition_text = None
-        term_id = None
-        image_url = None
+        term_text: Optional[str] = None
+        definition_text: Optional[str] = None
+        term_id: Optional[str] = None
+        image_url: Optional[str] = None
         
         # Handle different API response structures
         
@@ -284,25 +284,25 @@ class SetScraper(BaseScraper):
         
         return None
     
-    def _scrape_from_dom(self, page, set_url: str) -> FlashCardSet:
+    def _scrape_from_dom(self, page: Page, set_url: str) -> FlashCardSet:
         """Fallback: Scrape flashcard data from DOM."""
         cards: List[FlashCard] = []
         
         # Get set title
         title = "Untitled Set"
         try:
-            title_elem = page.locator('h1, [class*="SetTitle"]').first
+            title_elem: Locator = page.locator('h1, [class*="SetTitle"]').first
             if title_elem.is_visible(timeout=3000):
                 title = title_elem.inner_text().strip()
         except:
             pass
         
         # Extract set ID
-        set_id = self._extract_set_id(set_url)
+        set_id: str | None = self._extract_set_id(set_url)
         
         # Try to find and click "See all" or expand button to show all terms
         try:
-            expand_btns = page.locator('button:has-text("See all"), button:has-text("Xem tất cả")').all()
+            expand_btns: List[Locator] = page.locator('button:has-text("See all"), button:has-text("Xem tất cả")').all()
             for btn in expand_btns:
                 if btn.is_visible():
                     btn.click()
@@ -315,7 +315,7 @@ class SetScraper(BaseScraper):
         self._scroll_to_bottom(page)
         
         # Various selectors for term/definition pairs
-        selectors = [
+        selectors: List[Dict[str, str]] = [
             # Modern Quizlet structure
             {
                 "container": '[class*="SetPageTerm"]',
@@ -338,24 +338,24 @@ class SetScraper(BaseScraper):
         
         for sel in selectors:
             try:
-                containers = page.locator(sel["container"]).all()
+                containers: List[Locator] = page.locator(sel["container"]).all()
                 
                 if not containers:
                     continue
                 
                 for container in containers:
                     try:
-                        term_elem = container.locator(sel["term"]).first
-                        def_elem = container.locator(sel["definition"]).first
+                        term_elem: Locator = container.locator(sel["term"]).first
+                        def_elem: Locator = container.locator(sel["definition"]).first
                         
-                        term_text = term_elem.inner_text().strip() if term_elem.is_visible() else ""
-                        def_text = def_elem.inner_text().strip() if def_elem.is_visible() else ""
+                        term_text: str = term_elem.inner_text().strip() if term_elem.is_visible() else ""
+                        def_text: str = def_elem.inner_text().strip() if def_elem.is_visible() else ""
                         
                         if term_text and def_text:
                             # Try to get image
-                            image_url = None
+                            image_url: Optional[str] = None
                             try:
-                                img = container.locator("img").first
+                                img: Locator = container.locator("img").first
                                 if img.is_visible():
                                     image_url = img.get_attribute("src")
                             except:
@@ -388,7 +388,7 @@ class SetScraper(BaseScraper):
             term_count=len(cards)
         )
     
-    def _extract_via_javascript(self, page) -> List[FlashCard]:
+    def _extract_via_javascript(self, page: Page) -> List[FlashCard]:
         """Extract cards via JavaScript execution."""
         cards: List[FlashCard] = []
         
@@ -414,7 +414,7 @@ class SetScraper(BaseScraper):
             if result:
                 data = json.loads(result)
                 # Parse the extracted data
-                api_set = self._parse_api_data(data, page.url)
+                api_set: FlashCardSet = self._parse_api_data(data, page.url)
                 return api_set.cards
                 
         except Exception as e:
@@ -422,9 +422,9 @@ class SetScraper(BaseScraper):
         
         return cards
     
-    def _check_for_errors(self, page) -> None:
+    def _check_for_errors(self, page: Page) -> None:
         """Check for error conditions on the page."""
-        url = page.url
+        url: str = page.url
         
         # Check for 404
         if "/404" in url or page.locator('text="Page not found"').is_visible(timeout=1000):
@@ -443,14 +443,14 @@ class SetScraper(BaseScraper):
     
     def _extract_set_id(self, url: str) -> Optional[str]:
         """Extract set ID from URL."""
-        patterns = [
+        patterns: List[str] = [
             r'/(\d+)/[^/]+-flash-cards',
             r'/set/(\d+)',
             r'/(\d+)/'
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, url)
+            match: re.Match[str] | None = re.search(pattern, url)
             if match:
                 return match.group(1)
         

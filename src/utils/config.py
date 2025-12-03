@@ -6,12 +6,12 @@ Following Single Responsibility Principle - only handles configuration.
 import os
 import yaml
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from pathlib import Path
 
 from src.core.exceptions import ConfigurationError
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ConfigLoader:
@@ -20,14 +20,14 @@ class ConfigLoader:
     Single Responsibility: Configuration management only.
     """
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config.yaml") -> None:
         """
         Initialize config loader.
         
         Args:
             config_path: Path to YAML configuration file.
         """
-        self._config_path = config_path
+        self._config_path: str = config_path
         self._config: Dict[str, Any] = {}
         self._load()
     
@@ -50,7 +50,7 @@ class ConfigLoader:
             raise ConfigurationError(f"Failed to load config file: {str(e)}")
         
         # Merge with defaults
-        defaults = self._get_defaults()
+        defaults: Dict[str, Any] = self._get_defaults()
         self._config = self._deep_merge(defaults, self._config)
         
         # Override with environment variables
@@ -85,9 +85,9 @@ class ConfigLoader:
             }
         }
     
-    def _deep_merge(self, base: Dict, override: Dict) -> Dict:
+    def _deep_merge(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two dictionaries."""
-        result = base.copy()
+        result: Dict[str, Any] = base.copy()
         
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
@@ -100,7 +100,7 @@ class ConfigLoader:
     def _apply_env_overrides(self) -> None:
         """Apply environment variable overrides."""
         # Map of env vars to config paths
-        env_mapping = {
+        env_mapping: Dict[str, Optional[str]] = {
             "QUIZLET_USERNAME": None,  # Special handling
             "QUIZLET_PASSWORD": None,  # Special handling
             "QUIZLET_HEADLESS": "browser.headless",
@@ -114,8 +114,8 @@ class ConfigLoader:
     
     def _set_nested(self, path: str, value: Any) -> None:
         """Set a nested configuration value using dot notation."""
-        keys = path.split(".")
-        current = self._config
+        keys: list[str] = path.split(".")
+        current: Dict[str, Any] = self._config
         
         for key in keys[:-1]:
             if key not in current:
@@ -136,6 +136,16 @@ class ConfigLoader:
         
         current[keys[-1]] = value
     
+    def set(self, key: str, value: Any) -> None:
+        """
+        Set a configuration value by key (supports dot notation).
+        
+        Args:
+            key: Configuration key (e.g., "browser.headless").
+            value: Value to set.
+        """
+        self._set_nested(key, value)
+    
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get configuration value by key (supports dot notation).
@@ -147,8 +157,8 @@ class ConfigLoader:
         Returns:
             Configuration value.
         """
-        keys = key.split(".")
-        current = self._config
+        keys: list[str] = key.split(".")
+        current: Any = self._config
         
         for k in keys:
             if isinstance(current, dict) and k in current:
@@ -178,6 +188,6 @@ class ConfigLoader:
     @property
     def session_path(self) -> str:
         """Get full path to session file."""
-        session_dir = self.get("auth.session_dir", "auth")
-        session_file = self.get("auth.session_file", "quizlet_session.json")
+        session_dir = str(self.get("auth.session_dir", "auth"))
+        session_file = str(self.get("auth.session_file", "quizlet_session.json"))
         return os.path.join(session_dir, session_file)

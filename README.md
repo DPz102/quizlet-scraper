@@ -7,7 +7,7 @@ Export flashcards từ Quizlet, bao gồm cả private sets được chia sẻ v
 - 🔐 Đăng nhập và lưu session để tái sử dụng
 - 📚 Tự động phát hiện tất cả flashcard sets trong thư viện
 - 🔗 Hỗ trợ private sets được share qua classes/folders
-- 📤 Export ra nhiều định dạng: JSON, CSV, TSV, Anki
+- 📤 Export định dạng tương thích Quizlet Import
 - 🛡️ Anti-detection với random delays và real browser fingerprints
 - 🏗️ Kiến trúc SOLID, dễ mở rộng
 
@@ -32,47 +32,99 @@ playwright install chromium
 
 ## Usage
 
-### Basic Usage
+### Flow 1: Discover (Đăng nhập & Quét thư viện)
 
 ```bash
-# Run with interactive login
-python -m src.main
+# Đăng nhập và quét danh sách flashcard sets
+python -m src.main discover
 
-# With username (will prompt for password)
-python -m src.main -u your_email@example.com
-
-# Scrape specific sets
-python -m src.main -s "https://quizlet.com/123456789/set-name-flash-cards"
-
-# Export to multiple formats
-python -m src.main -f json csv anki
-
-# Run headless (after first login)
-python -m src.main --headless
+# Hoặc với username (sẽ prompt password)
+python -m src.main discover -u your_email@example.com
 ```
 
-### Programmatic Usage
+**Output:**
+- Session được lưu vào `auth/quizlet_session.json`
+- Metadata được lưu vào `output/sets_metadata.json`
 
-```python
-from src.utils.config import ConfigLoader
-from src.main import QuizletScraper
+### Flow 2: Scrape (Cào nội dung)
 
-config = ConfigLoader("config.yaml")
-scraper = QuizletScraper(config)
+```bash
+# Scrape 1 set cụ thể bằng ID (từ metadata)
+python -m src.main scrape --set-id 123456789
 
-# Login
-scraper.login("your_email", "your_password")
+# Scrape bằng URL trực tiếp
+python -m src.main scrape --url "https://quizlet.com/123456789/set-name-flash-cards"
 
-# Discover all sets
-sets = scraper.discover_sets()
+# Scrape tất cả sets đã discover
+python -m src.main scrape --all
+```
 
-# Scrape specific sets
-scraped = scraper.scrape_sets([s.url for s in sets])
+**Output:** File `output/export_<set_id>_<title>.txt`
 
-# Export
-paths = scraper.export(scraped, formats=["json", "csv"])
+### Flow 3: Logout (Đổi tài khoản)
 
-scraper.close()
+```bash
+# Xóa session hiện tại
+python -m src.main logout
+
+# Sau đó chạy discover để đăng nhập tài khoản mới
+python -m src.main discover
+```
+
+## Export Format
+
+File export sử dụng custom tags để tương thích với Quizlet Import:
+
+```
+term1/answer/definition1/question/term2/answer/definition2
+```
+
+### Import vào Quizlet
+
+1. Mở file `export_*.txt`
+2. Copy toàn bộ nội dung (bỏ qua dòng comment `#`)
+3. Vào Quizlet → Create → Import
+4. Paste nội dung
+5. Cài đặt:
+   - **Between term and definition:** `/answer/`
+   - **Between cards:** `/question/`
+6. Click Import
+
+### Ví dụ Export
+
+```
+# Biology Chapter 1
+# Set ID: 123456789
+# Cards: 3
+# Import settings for Quizlet:
+#   Between term and definition: /answer/
+#   Between cards: /question/
+
+Mitochondria/answer/Powerhouse of the cell/question/DNA/answer/Deoxyribonucleic acid/question/RNA/answer/Ribonucleic acid
+```
+
+## Project Structure
+
+```
+├── src/
+│   ├── core/           # Interfaces & exceptions
+│   ├── auth/           # Authentication (SRP)
+│   │   ├── browser_manager.py
+│   │   └── authenticator.py
+│   ├── scraper/        # Scraping logic (SRP)
+│   │   ├── base_scraper.py
+│   │   ├── library_scraper.py
+│   │   └── set_scraper.py
+│   ├── export/         # Exporter
+│   │   └── quizlet_exporter.py
+│   ├── utils/          # Utilities
+│   └── main.py         # Orchestrator
+├── auth/               # Session storage (gitignored)
+├── output/             # Export output
+│   ├── sets_metadata.json
+│   └── export_*.txt
+├── config.yaml
+└── requirements.txt
 ```
 
 ## Configuration
@@ -81,62 +133,20 @@ Edit `config.yaml`:
 
 ```yaml
 browser:
-  headless: false  # Set true after initial login
-  slow_mo: 100     # Delay between actions (ms)
+  headless: false  # Set true sau khi login lần đầu
+  slow_mo: 100     # Delay giữa actions (ms)
 
 scraper:
-  delay_min: 2.0   # Min delay between requests (s)
-  delay_max: 5.0   # Max delay between requests (s)
+  delay_min: 2.0   # Min delay giữa requests (s)
+  delay_max: 5.0   # Max delay giữa requests (s)
 
 export:
   output_dir: "output"
-  formats:
-    - json
-    - csv
 ```
-
-## Project Structure
-
-```
-├── src/
-│   ├── core/           # Interfaces & exceptions (DIP)
-│   │   ├── interfaces.py
-│   │   └── exceptions.py
-│   ├── auth/           # Authentication (SRP)
-│   │   ├── browser_manager.py
-│   │   └── authenticator.py
-│   ├── scraper/        # Scraping logic (SRP)
-│   │   ├── base_scraper.py
-│   │   ├── library_scraper.py
-│   │   └── set_scraper.py
-│   ├── export/         # Exporters (OCP)
-│   │   ├── json_exporter.py
-│   │   ├── csv_exporter.py
-│   │   ├── anki_exporter.py
-│   │   └── exporter_factory.py
-│   ├── utils/          # Utilities
-│   │   ├── config.py
-│   │   └── logging_config.py
-│   └── main.py         # Orchestrator
-├── auth/               # Session storage (gitignored)
-├── output/             # Export output
-├── config.yaml
-└── requirements.txt
-```
-
-## SOLID Principles Applied
-
-| Principle | Implementation |
-|-----------|----------------|
-| **S**ingle Responsibility | Each class has one job: `Authenticator` = auth, `SetScraper` = scraping |
-| **O**pen/Closed | `BaseExporter` is closed for modification, open for extension |
-| **L**iskov Substitution | `TSVExporter` can replace `CSVExporter` anywhere |
-| **I**nterface Segregation | Small, focused interfaces: `IAuthenticator`, `IExporter`, `IScraper` |
-| **D**ependency Inversion | High-level `QuizletScraper` depends on abstractions, not concretions |
 
 ## Legal Notice
 
-⚠️ **Important:**
+⚠️ **Lưu ý:**
 - Chỉ scrape data bạn có quyền truy cập hợp pháp
 - Tool này dành cho backup cá nhân
 - Tuân thủ Terms of Service của Quizlet

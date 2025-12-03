@@ -6,11 +6,11 @@ Following Template Method pattern and DRY principle.
 import random
 import time
 import logging
-from abc import ABC, abstractmethod
-from typing import Optional
+from abc import ABC
+from typing import Literal, Optional
 from playwright.sync_api import BrowserContext, Page
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class BaseScraper(ABC):
@@ -25,7 +25,7 @@ class BaseScraper(ABC):
         delay_min: float = 2.0,
         delay_max: float = 5.0,
         max_retries: int = 3
-    ):
+    ) -> None:
         """
         Initialize base scraper.
         
@@ -35,10 +35,10 @@ class BaseScraper(ABC):
             delay_max: Maximum delay between requests (seconds).
             max_retries: Maximum retry attempts on failure.
         """
-        self._context = context
-        self._delay_min = delay_min
-        self._delay_max = delay_max
-        self._max_retries = max_retries
+        self._context: BrowserContext = context
+        self._delay_min: float = delay_min
+        self._delay_max: float = delay_max
+        self._max_retries: int = max_retries
         self._page: Optional[Page] = None
     
     def _get_page(self) -> Page:
@@ -49,11 +49,15 @@ class BaseScraper(ABC):
     
     def _random_delay(self) -> None:
         """Apply random delay between requests (anti-detection)."""
-        delay = random.uniform(self._delay_min, self._delay_max)
+        delay: float = random.uniform(self._delay_min, self._delay_max)
         logger.debug(f"Waiting {delay:.2f}s...")
         time.sleep(delay)
     
-    def _navigate(self, url: str, wait_until: str = "networkidle") -> Page:
+    def _navigate(
+        self,
+        url: str,
+        wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"] = "networkidle"
+    ) -> Page:
         """
         Navigate to URL with retry logic.
         
@@ -64,7 +68,7 @@ class BaseScraper(ABC):
         Returns:
             Page after navigation.
         """
-        page = self._get_page()
+        page: Page = self._get_page()
         
         for attempt in range(1, self._max_retries + 1):
             try:
@@ -82,7 +86,7 @@ class BaseScraper(ABC):
     
     def _scroll_to_bottom(self, page: Optional[Page] = None) -> None:
         """Scroll to bottom of page to load lazy content."""
-        p = page or self._get_page()
+        p: Page = page or self._get_page()
         
         # Get initial height
         last_height = p.evaluate("document.body.scrollHeight")
