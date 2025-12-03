@@ -158,6 +158,7 @@ class FlashcardParser:
                 definition_el = sides[1].select_one('span.TermText')
                 if term_el and definition_el:
                     term = self._extract_text(term_el)
+                    term = self._format_multiple_choice(term)
                     definition = definition_el.get_text(strip=True)
                     flashcards.append({"term": term, "definition": definition})
         return flashcards
@@ -165,6 +166,15 @@ class FlashcardParser:
     def _extract_text(self, element) -> str:
         parts = [p.get_text(strip=True) for p in element.find_all('p') if p.get_text(strip=True)]
         return '\n'.join(parts) if parts else element.get_text(strip=True)
+
+    def _format_multiple_choice(self, text: str) -> str:
+        """Format đáp án trắc nghiệm - thêm xuống dòng trước A., B., C., D., E., F."""
+        import re
+        # Pattern: tìm các đáp án như A., B., C., D., E., F. (có thể có dấu cách hoặc không trước)
+        # Chỉ thêm \n nếu trước đó không phải là đầu dòng
+        formatted = re.sub(r'(?<!\n)([A-F])\.\s*', r'\n\1. ', text)
+        # Loại bỏ \n thừa ở đầu nếu có
+        return formatted.lstrip('\n')
 
 
 class TxtExporter:
