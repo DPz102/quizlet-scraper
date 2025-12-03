@@ -19,6 +19,7 @@ output/
 
 # IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 *~

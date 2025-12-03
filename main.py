@@ -1,5 +1,6 @@
 """Công cụ Scrape Flashcards từ Quizlet"""
 import os
+import re
 import sys
 from pathlib import Path
 from dataclasses import dataclass
@@ -99,7 +100,7 @@ class QuizletAuth:
                 accept_btn.click()
                 print("🍪 Đã chấp nhận cookies")
                 page.wait_for_timeout(1000)
-        except:
+        except Exception:
             pass
 
     def login_auto(self) -> bool:
@@ -169,7 +170,6 @@ class FlashcardParser:
 
     def _format_multiple_choice(self, text: str) -> str:
         """Format đáp án trắc nghiệm - thêm xuống dòng trước A., B., C., D., E., F."""
-        import re
         # Pattern: tìm các đáp án như A., B., C., D., E., F. (có thể có dấu cách hoặc không trước)
         # Chỉ thêm \n nếu trước đó không phải là đầu dòng
         formatted = re.sub(r'(?<!\n)([A-F])\.\s*', r'\n\1. ', text)

@@ -1,6 +1,6 @@
 # Quizlet Flashcard Scraper
 
-Công cụ scrape flashcards từ Quizlet (bao gồm các set private).
+Công cụ scrape flashcards từ Quizlet.
 
 ## Cài đặt
 
@@ -56,12 +56,11 @@ Câu hỏi 2
 - `[ch]` = phân cách giữa các card
 - `[da]` = phân cách giữa câu hỏi và đáp án
 
-## Yêu cầu
+## Yêu cầu hệ thống
 
-- Python 3.9+
-- Chrome browser
-- Patchright (Playwright fork bypass Cloudflare)
+- **Python**: 3.9 trở lên
+- **OS**: Windows / macOS / Linux
+- **Browser**: Google Chrome (phiên bản mới nhất)
+- **Patchright**: Playwright fork bypass Cloudflare (tự cài qua requirements.txt)
 
-## License
 
-MIT
