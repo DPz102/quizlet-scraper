@@ -15,8 +15,8 @@ Export flashcards từ Quizlet, bao gồm cả private sets được chia sẻ v
 
 ```bash
 # Clone repo
-git clone https://github.com/DPz102/quizet-private-flashcard-scraper.git
-cd quizet-private-flashcard-scraper
+git clone https://github.com/DPz102/quizlet-private-flashcard-scraper.git
+cd quizlet-private-flashcard-scraper
 
 # Create virtual environment
 python -m venv venv
