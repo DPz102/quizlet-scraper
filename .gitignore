@@ -33,10 +33,10 @@ env/
 *.swo
 
 # Project specific
-auth/
-!auth/.gitkeep
-output/
-!output/.gitkeep
+/auth/
+!/auth/.gitkeep
+/output/
+!/output/.gitkeep
 *.session.json
 quizlet_session.json
 
