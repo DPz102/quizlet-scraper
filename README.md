@@ -1,36 +1,48 @@
 # Quizlet Flashcard Scraper
 
-Scrape flashcards từ Quizlet private sets.
+Công cụ scrape flashcards từ Quizlet (bao gồm các set private).
 
-## Installation
+## Cài đặt
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Setup
+## Cấu hình
 
 1. Copy `.env.example` → `.env`
-2. Điền thông tin:
-   ```
-   QUIZLET_EMAIL=your_email
-   QUIZLET_PASSWORD=your_password
-   QUIZLET_SET_URL=https://quizlet.com/vn/xxx/set-name-flash-cards/
-   ```
+2. Điền thông tin đăng nhập và URLs:
 
-## Usage
+```env
+# Thông tin đăng nhập Quizlet
+QUIZLET_EMAIL=your_email@example.com
+QUIZLET_PASSWORD=your_password
+
+# Danh sách URLs (mỗi URL một dòng, kết thúc bằng dấu phẩy)
+QUIZLET_SET_URLS=
+    https://quizlet.com/vn/123456/set1-flash-cards/,
+    https://quizlet.com/vn/789012/set2-flash-cards/,
+```
+
+## Sử dụng
 
 ```bash
-# Step 1: Login (chỉ cần 1 lần)
-python main.py login
+# Login với email/password
+python main.py login auto
 
-# Step 2: Scrape
+# Login thủ công (Google/Facebook OAuth)
+python main.py login manual
+
+# Scrape flashcards
 python main.py scrape
 ```
 
-## Output Format
+**Lưu ý:** Mỗi lần login sẽ tự động xóa session cũ để tránh xung đột.
 
-File `output/flashcards.txt`:
+## Định dạng output
+
+File được lưu tại `output/<tên-set>.txt`:
+
 ```
 Câu hỏi 1
 A. Đáp án A
@@ -41,8 +53,14 @@ Câu hỏi 2
 [da]Định nghĩa 2
 ```
 
-- `[ch]` = separator giữa các card
-- `[da]` = separator giữa thuật ngữ và định nghĩa
+- `[ch]` = phân cách giữa các card
+- `[da]` = phân cách giữa câu hỏi và đáp án
+
+## Yêu cầu
+
+- Python 3.9+
+- Chrome browser
+- Patchright (Playwright fork bypass Cloudflare)
 
 ## License
 

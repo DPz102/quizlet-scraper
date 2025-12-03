@@ -1,4 +1,4 @@
-"""Quizlet Flashcard Scraper"""
+"""Công cụ Scrape Flashcards từ Quizlet"""
 import os
 import sys
 from pathlib import Path
@@ -20,8 +20,25 @@ class Config:
     @classmethod
     def load(cls) -> "Config":
         load_dotenv()
-        urls_raw = os.getenv("QUIZLET_SET_URLS", "")
-        urls = [u.strip() for u in urls_raw.replace("\n", ",").split(",") if u.strip()]
+        
+        # Đọc URLs trực tiếp từ file .env (hỗ trợ multiline)
+        urls = []
+        env_file = Path(".env")
+        if env_file.exists():
+            content = env_file.read_text(encoding="utf-8")
+            # Tìm block QUIZLET_SET_URLS
+            if "QUIZLET_SET_URLS=" in content:
+                urls_section = content.split("QUIZLET_SET_URLS=")[1]
+                # Lấy tất cả lines cho đến khi gặp biến mới (hoặc hết file)
+                lines = []
+                for line in urls_section.split("\n"):
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" not in line:
+                        lines.append(line.rstrip(","))
+                    elif "=" in line and not line.startswith("#"):
+                        break  # Gặp biến mới
+                urls = [u for u in lines if u.startswith("http")]
+        
         return cls(
             email=os.getenv("QUIZLET_EMAIL", ""),
             password=os.getenv("QUIZLET_PASSWORD", ""),
@@ -74,12 +91,13 @@ class QuizletAuth:
         self._config = config
 
     def _accept_cookies(self):
+        """Đóng popup cookie nếu có"""
         page = self._browser.page
         try:
             accept_btn = page.locator('button:has-text("Accept All")').first
             if accept_btn.is_visible(timeout=3000):
                 accept_btn.click()
-                print("🍪 Accepted cookies")
+                print("🍪 Đã chấp nhận cookies")
                 page.wait_for_timeout(1000)
         except:
             pass
@@ -108,26 +126,19 @@ class QuizletAuth:
         self._accept_cookies()
 
         page = self._browser.page
-        print("⏳ Đang đợi bạn login... (tự động detect)")
+        print("⏳ Đang đợi bạn login... (timeout 3 phút)")
 
-        # Poll check mỗi 2 giây, timeout 3 phút
+        # Đơn giản: chờ URL không còn /login (sau khi login sẽ redirect)
         for _ in range(90):
             page.wait_for_timeout(2000)
-            try:
-                # Check 1: Avatar/profile element (chỉ hiện khi logged in)
-                if page.locator('[data-testid="user-avatar"], .SiteHeader-userAvatar, img[alt*="avatar"]').first.is_visible(timeout=500):
-                    print("✅ Login thành công!")
-                    return True
-                
-                # Check 2: URL đã ở trang chính Quizlet (không phải login/google)
-                url = page.url.lower()
-                if "quizlet.com" in url and "/login" not in url and "accounts.google" not in url and "facebook.com" not in url:
-                    # Double check bằng cách tìm element login-only
-                    if page.locator('a[href="/settings"], button[aria-label*="account"]').first.is_visible(timeout=500):
-                        print("✅ Login thành công!")
-                        return True
-            except:
-                pass
+            url = page.url.lower()
+            # Bỏ qua nếu đang ở trang OAuth bên ngoài
+            if "accounts.google" in url or "facebook.com" in url:
+                continue
+            # Login thành công = URL quizlet nhưng không còn /login
+            if "quizlet.com" in url and "/login" not in url:
+                print("✅ Login thành công!")
+                return True
 
         print("❌ Timeout sau 3 phút")
         return False
@@ -138,7 +149,7 @@ class FlashcardParser:
         soup = BeautifulSoup(html, 'html.parser')
         flashcards = []
         cards = soup.select('div.SetPageTermsList-term')
-        print(f"📝 Found {len(cards)} cards")
+        print(f"📝 Tìm thấy {len(cards)} cards")
 
         for card in cards:
             sides = card.select('div[data-testid="set-page-term-card-side"]')
@@ -185,16 +196,18 @@ class QuizletScraper:
 
 
 def cmd_login(config: Config, mode: str):
+    # Xóa browser_data cũ trước khi login mới
+    import shutil
+    if config.browser_data.exists():
+        shutil.rmtree(config.browser_data)
+        print("🗑️ Đã xóa session cũ")
+    
     with Browser(config) as browser:
         auth = QuizletAuth(browser, config)
         success = auth.login_auto() if mode == "auto" else auth.login_manual()
         
         if not success:
-            # Xóa browser_data nếu login thất bại
-            import shutil
-            if config.browser_data.exists():
-                shutil.rmtree(config.browser_data)
-                print("🗑️ Đã xóa session data do login thất bại")
+            print("❌ Login thất bại!")
 
 
 def cmd_scrape(config: Config):
@@ -202,7 +215,7 @@ def cmd_scrape(config: Config):
         print("❌ Chưa có QUIZLET_SET_URLS trong .env!")
         return
 
-    print(f"📚 Found {len(config.set_urls)} URL(s)")
+    print(f"📚 Tìm thấy {len(config.set_urls)} URL(s)")
 
     with Browser(config) as browser:
         scraper = QuizletScraper(browser, FlashcardParser())
@@ -222,8 +235,9 @@ def cmd_scrape(config: Config):
 def main():
     if len(sys.argv) < 2:
         print("Quizlet Flashcard Scraper\n")
-        print("  python main.py login auto    Login với email/password")
-        print("  python main.py login manual  Login thủ công (Google/Facebook)")
+        print("Cách dùng:")
+        print("  python main.py login auto    Đăng nhập bằng email/password")
+        print("  python main.py login manual  Đăng nhập thủ công (Google/Facebook)")
         print("  python main.py scrape        Scrape flashcards từ URLs trong .env")
         return
 
@@ -239,7 +253,7 @@ def main():
     elif cmd == "scrape":
         cmd_scrape(config)
     else:
-        print(f"❌ Unknown command: {cmd}")
+        print(f"❌ Lệnh không hợp lệ: {cmd}")
 
 
 if __name__ == "__main__":
