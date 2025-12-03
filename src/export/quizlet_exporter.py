@@ -177,7 +177,7 @@ class QuizletExporter:
         return sanitized[:50]
 
 
-def parse_quizlet_export(content: str) -> List[Dict[str, Any]]:
+def parse_quizlet_export(content: str) -> list[dict[str, object]]:
     """
     Parse exported content back to cards (for testing/verification).
     
@@ -187,7 +187,7 @@ def parse_quizlet_export(content: str) -> List[Dict[str, Any]]:
     Returns:
         List of card dictionaries.
     """
-    cards: List[Dict[str, Any]] = []
+    cards: list[dict[str, object]] = []
     
     # Remove comment lines
     lines = [line for line in content.split("\n") if not line.startswith("#") and line.strip()]
