@@ -1,10 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
 # Environment
 .env
-venv/
-__pycache__/
-*.pyc
 
-# Browser data (session)
+# Browser session
 browser_data/
 
 # Output
@@ -12,3 +19,10 @@ output/
 
 # IDE
 .idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
