@@ -201,7 +201,19 @@ class QuizletScraper:
     def scrape(self, url: str) -> list[dict]:
         print(f"🎯 Scraping: {url[:60]}...")
         self._browser.goto(url)
-        self._browser.page.wait_for_timeout(3000)
+        page = self._browser.page
+        page.wait_for_timeout(3000)
+        
+        # Check và click nút "Hiển thị thêm" nếu có
+        try:
+            show_more = page.locator('span:has-text("Hiển thị thêm")').first
+            if show_more.is_visible(timeout=2000):
+                print("   📖 Click 'Hiển thị thêm'...")
+                show_more.click()
+                page.wait_for_timeout(3000)  # Đợi cards load
+        except Exception:
+            pass  # Không có nút --> bỏ qua
+        
         return self._parser.parse(self._browser.get_html())
 
 
