@@ -1,4 +1,4 @@
-# Quizlet Flashcard Scraper
+# Quizlet Scraper
 
 Công cụ scrape flashcards từ Quizlet.
 
